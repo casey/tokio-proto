@@ -165,7 +165,7 @@
 //! fn main() {
 //!     let addr = "0.0.0.0:12345".parse().unwrap();
 //!     TcpServer::new(IntProto, addr)
-//!         .serve(|| Ok(Doubler));
+//!         .serve_forever(|| Ok(Doubler));
 //! }
 //! ```
 
