@@ -12,8 +12,8 @@ extern crate env_logger;
 
 use std::io;
 
-use futures::stream::{Stream};
-use futures::{Future};
+use futures::stream::Stream;
+use futures::Future;
 use tokio_proto::streaming::Message;
 use tokio_proto::streaming::multiplex::{RequestId, Frame};
 use tokio_service::Service;

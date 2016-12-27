@@ -45,7 +45,8 @@ impl<T> FrameBuf<T> {
     pub fn with_capacity(capacity: usize) -> FrameBuf<T> {
         assert!(capacity < MAX_CAPACITY,
                 "requested frame buffer capacity too large; max={}; requested={}",
-                MAX_CAPACITY, capacity);
+                MAX_CAPACITY,
+                capacity);
 
         let inner = UnsafeCell::new(Inner::with_capacity(capacity));
         FrameBuf { inner: Rc::new(inner) }
@@ -239,7 +240,7 @@ impl<T> Inner<T> {
 
 #[cfg(test)]
 mod test {
-    use super::{FrameBuf};
+    use super::FrameBuf;
 
     #[test]
     fn test_capacity() {

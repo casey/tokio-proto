@@ -4,7 +4,7 @@ extern crate tokio_proto;
 extern crate tokio_service;
 
 use std::io;
-use futures::{BoxFuture};
+use futures::BoxFuture;
 use tokio_core::io::{Io, Codec, Framed, EasyBuf};
 use tokio_proto::TcpServer;
 use tokio_proto::streaming::{Message, Body};
@@ -96,8 +96,7 @@ fn test_streaming_pipeline_framed() {
     // Don't want this to run, only compile
     if false {
         let addr = "0.0.0.0:12345".parse().unwrap();
-        TcpServer::new(PipelineProto, addr)
-            .serve(|| Ok(TestService));
+        TcpServer::new(PipelineProto, addr).serve(|| Ok(TestService));
     }
 }
 
@@ -107,7 +106,6 @@ fn test_streaming_multiplex_framed() {
     // Don't want this to run, only compile
     if false {
         let addr = "0.0.0.0:12345".parse().unwrap();
-        TcpServer::new(MultiplexProto, addr)
-            .serve(|| Ok(TestService));
+        TcpServer::new(MultiplexProto, addr).serve(|| Ok(TestService));
     }
 }

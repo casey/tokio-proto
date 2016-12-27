@@ -26,10 +26,8 @@ pub struct StreamingPipeline<B>(B);
 /// Additional transport details relevant to streaming, pipelined protocols.
 ///
 /// All methods added in this trait have default implementations.
-pub trait Transport: 'static +
-    Stream<Error = io::Error> +
-    Sink<SinkError = io::Error>
-{
+pub trait Transport
+    : 'static + Stream<Error = io::Error> + Sink<SinkError = io::Error> {
     /// Allow the transport to do miscellaneous work (e.g., sending ping-pong
     /// messages) that is not directly connected to sending or receiving frames.
     ///
@@ -43,4 +41,4 @@ pub trait Transport: 'static +
     }
 }
 
-impl<T:Io + 'static, C: Codec + 'static> Transport for Framed<T,C> {}
+impl<T: Io + 'static, C: Codec + 'static> Transport for Framed<T, C> {}

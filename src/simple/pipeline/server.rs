@@ -37,9 +37,7 @@ pub trait ServerProto<T: 'static>: 'static {
     /// An easy way to build a transport is to use `tokio_core::io::Framed`
     /// together with a `Codec`; in that case, the transport type is
     /// `Framed<T, YourCodec>`. See the crate docs for an example.
-    type Transport: 'static +
-        Stream<Item = Self::Request, Error = io::Error> +
-        Sink<SinkItem = Self::Response, SinkError = io::Error>;
+    type Transport: 'static + Stream<Item = Self::Request, Error = io::Error> + Sink<SinkItem = Self::Response, SinkError = io::Error>;
 
     /// A future for initializing a transport from an I/O object.
     ///
@@ -71,8 +69,9 @@ impl<T: 'static, P: ServerProto<T>> BindServer<Pipeline, T> for P {
     }
 }
 
-impl<T, P> streaming::pipeline::ServerProto<T> for LiftProto<P> where
-    T: 'static, P: ServerProto<T>
+impl<T, P> streaming::pipeline::ServerProto<T> for LiftProto<P>
+    where T: 'static,
+          P: ServerProto<T>
 {
     type Request = P::Request;
     type RequestBody = ();
@@ -100,9 +99,7 @@ impl<S: Service> Service for LiftService<S> {
 
     fn call(&mut self, req: Self::Request) -> Self::Future {
         match req {
-            Message::WithoutBody(msg) => {
-                LiftFuture(self.0.call(msg), marker::PhantomData)
-            }
+            Message::WithoutBody(msg) => LiftFuture(self.0.call(msg), marker::PhantomData),
             Message::WithBody(..) => panic!("bodies not supported"),
         }
     }

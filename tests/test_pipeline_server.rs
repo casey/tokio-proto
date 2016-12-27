@@ -30,9 +30,7 @@ use support::mock;
 
 #[test]
 fn test_immediate_done() {
-    let service = simple_service(|_| {
-        future::ok(Message::WithoutBody("goodbye"))
-    });
+    let service = simple_service(|_| future::ok(Message::WithoutBody("goodbye")));
 
     let (mut mock, _other) = mock::pipeline_server(service);
     mock.allow_and_assert_drop();
@@ -162,9 +160,8 @@ fn test_repeatedly_flushes_messages() {
 
 #[test]
 fn test_returning_error_from_service() {
-    let service = simple_service(move |_| {
-        future::err(io::Error::new(io::ErrorKind::Other, "nope"))
-    });
+    let service =
+        simple_service(move |_| future::err(io::Error::new(io::ErrorKind::Other, "nope")));
 
     let (mut mock, _other) = mock::pipeline_server(service);
 
@@ -175,9 +172,7 @@ fn test_returning_error_from_service() {
 
 #[test]
 fn test_reading_error_frame_from_transport() {
-    let service = simple_service(move |_| {
-        future::ok(Message::WithoutBody("omg no"))
-    });
+    let service = simple_service(move |_| future::ok(Message::WithoutBody("omg no")));
 
     let (mut mock, _other) = mock::pipeline_server(service);
     mock.send(Frame::Error {
@@ -188,9 +183,7 @@ fn test_reading_error_frame_from_transport() {
 
 #[test]
 fn test_reading_io_error_from_transport() {
-    let service = simple_service(move |_| {
-        future::finished(Message::WithoutBody("omg no"))
-    });
+    let service = simple_service(move |_| future::finished(Message::WithoutBody("omg no")));
 
     let (mut mock, _other) = mock::pipeline_server(service);
     mock.error(io::Error::new(io::ErrorKind::Other, "mock transport error frame"));
@@ -351,8 +344,7 @@ fn test_pipeline_streaming_body_without_consuming() {
 
 #[test]
 #[ignore]
-fn test_transport_error_during_body_stream() {
-}
+fn test_transport_error_during_body_stream() {}
 
 #[test]
 fn test_streaming_response_body() {
@@ -383,9 +375,15 @@ fn test_streaming_response_body() {
 }
 
 fn msg(msg: &'static str) -> Frame<&'static str, u32, io::Error> {
-    Frame::Message { message: msg, body: false }
+    Frame::Message {
+        message: msg,
+        body: false,
+    }
 }
 
 fn msg_with_body(msg: &'static str) -> Frame<&'static str, u32, io::Error> {
-    Frame::Message { message: msg, body: true }
+    Frame::Message {
+        message: msg,
+        body: true,
+    }
 }

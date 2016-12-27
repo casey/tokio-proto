@@ -52,10 +52,9 @@ pub trait ServerProto<T: 'static>: 'static {
     type Error: From<io::Error> + 'static;
 
     /// The frame transport, which usually take `T` as a parameter.
-    type Transport:
-        Transport<Self::RequestBody,
-                  Item = Frame<Self::Request, Self::RequestBody, Self::Error>,
-                  SinkItem = Frame<Self::Response, Self::ResponseBody, Self::Error>>;
+    type Transport: Transport<Self::RequestBody,
+              Item = Frame<Self::Request, Self::RequestBody, Self::Error>,
+              SinkItem = Frame<Self::Response, Self::ResponseBody, Self::Error>>;
 
     /// A future for initializing a transport from an I/O object.
     ///
@@ -67,10 +66,10 @@ pub trait ServerProto<T: 'static>: 'static {
     fn bind_transport(&self, io: T) -> Self::BindTransport;
 }
 
-impl<P, T, B> BindServer<super::StreamingMultiplex<B>, T> for P where
-    P: ServerProto<T>,
-    T: 'static,
-    B: Stream<Item = P::ResponseBody, Error = P::Error>,
+impl<P, T, B> BindServer<super::StreamingMultiplex<B>, T> for P
+    where P: ServerProto<T>,
+          T: 'static,
+          B: Stream<Item = P::ResponseBody, Error = P::Error>
 {
     type ServiceRequest = Message<P::Request, Body<P::RequestBody, P::Error>>;
     type ServiceResponse = Message<P::Response, B>;
@@ -81,22 +80,27 @@ impl<P, T, B> BindServer<super::StreamingMultiplex<B>, T> for P where
                          Response = Self::ServiceResponse,
                          Error = Self::ServiceError> + 'static
     {
-        let task = self.bind_transport(io).into_future().and_then(|transport| {
-            let dispatch: Dispatch<S, T, P> = Dispatch {
-                service: service,
-                transport: transport,
-                in_flight: vec![],
-            };
-            Multiplex::new(dispatch)
-        }).map_err(|_| ());
+        let task = self.bind_transport(io)
+            .into_future()
+            .and_then(|transport| {
+                let dispatch: Dispatch<S, T, P> = Dispatch {
+                    service: service,
+                    transport: transport,
+                    in_flight: vec![],
+                };
+                Multiplex::new(dispatch)
+            })
+            .map_err(|_| ());
 
         // Spawn the multiplex dispatcher
         handle.spawn(task)
     }
 }
 
-struct Dispatch<S, T, P> where
-    T: 'static, P: ServerProto<T>, S: Service
+struct Dispatch<S, T, P>
+    where T: 'static,
+          P: ServerProto<T>,
+          S: Service
 {
     // The service handling the connection
     service: S,
@@ -112,12 +116,12 @@ enum InFlight<F: Future> {
 /// The total number of requests that can be in flight at once.
 const MAX_IN_FLIGHT_REQUESTS: usize = 32;
 
-impl<P, T, B, S> super::advanced::Dispatch for Dispatch<S, T, P> where
-    P: ServerProto<T>,
-    B: Stream<Item = P::ResponseBody, Error = P::Error>,
-    S: Service<Request = Message<P::Request, Body<P::RequestBody, P::Error>>,
-               Response = Message<P::Response, B>,
-               Error = P::Error>,
+impl<P, T, B, S> super::advanced::Dispatch for Dispatch<S, T, P>
+    where P: ServerProto<T>,
+          B: Stream<Item = P::ResponseBody, Error = P::Error>,
+          S: Service<Request = Message<P::Request, Body<P::RequestBody, P::Error>>,
+                     Response = Message<P::Response, B>,
+                     Error = P::Error>
 {
     type Io = T;
     type In = P::Response;
@@ -158,7 +162,11 @@ impl<P, T, B, S> super::advanced::Dispatch for Dispatch<S, T, P> where
         }
     }
 
-    fn dispatch(&mut self, message: MultiplexMessage<Self::Out, Body<Self::BodyOut, Self::Error>, Self::Error>) -> io::Result<()> {
+    fn dispatch(&mut self,
+                message: MultiplexMessage<Self::Out,
+                                          Body<Self::BodyOut, Self::Error>,
+                                          Self::Error>)
+                -> io::Result<()> {
         assert!(self.poll_ready().is_ready());
 
         let MultiplexMessage { id, message, solo } = message;
@@ -189,14 +197,12 @@ impl<P, T, B, S> super::advanced::Dispatch for Dispatch<S, T, P> where
     }
 }
 
-/*
- *
- * ===== InFlight =====
- *
- */
+// ===== InFlight =====
+//
+//
 
 impl<F> InFlight<F>
-    where F: Future,
+    where F: Future
 {
     // Returns true if done
     fn poll(&mut self) -> bool {

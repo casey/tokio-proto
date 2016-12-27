@@ -35,9 +35,7 @@ pub trait ClientProto<T: 'static>: 'static {
     /// An easy way to build a transport is to use `tokio_core::io::Framed`
     /// together with a `Codec`; in that case, the transport type is
     /// `Framed<T, YourCodec>`. See the crate docs for an example.
-    type Transport: 'static +
-        Stream<Item = Self::Response, Error = io::Error> +
-        Sink<SinkItem = Self::Request, SinkError = io::Error>;
+    type Transport: 'static + Stream<Item = Self::Response, Error = io::Error> + Sink<SinkItem = Self::Request, SinkError = io::Error>;
 
     /// A future for initializing a transport from an I/O object.
     ///
@@ -69,8 +67,9 @@ impl<T: 'static, P: ClientProto<T>> BindClient<Pipeline, T> for P {
     }
 }
 
-impl<T, P> streaming::pipeline::ClientProto<T> for LiftProto<P> where
-    T: 'static, P: ClientProto<T>
+impl<T, P> streaming::pipeline::ClientProto<T> for LiftProto<P>
+    where T: 'static,
+          P: ClientProto<T>
 {
     type Request = P::Request;
     type RequestBody = ();
@@ -89,37 +88,48 @@ impl<T, P> streaming::pipeline::ClientProto<T> for LiftProto<P> where
 }
 
 /// Client `Service` for simple pipeline protocols
-pub struct ClientService<T, P> where T: 'static, P: ClientProto<T> {
-    inner: <LiftProto<P> as BindClient<StreamingPipeline<MyStream<P::Error>>, T>>::BindClient
+pub struct ClientService<T, P>
+    where T: 'static,
+          P: ClientProto<T>
+{
+    inner: <LiftProto<P> as BindClient<StreamingPipeline<MyStream<P::Error>>,
+                                                        T>>::BindClient,
 }
 
-impl<T, P> Clone for ClientService<T, P> where T: 'static, P: ClientProto<T> {
+impl<T, P> Clone for ClientService<T, P>
+    where T: 'static,
+          P: ClientProto<T>
+{
     fn clone(&self) -> Self {
-        ClientService {
-            inner: self.inner.clone(),
-        }
+        ClientService { inner: self.inner.clone() }
     }
 }
 
-impl<T, P> Service for ClientService<T, P> where T: 'static, P: ClientProto<T> {
+impl<T, P> Service for ClientService<T, P>
+    where T: 'static,
+          P: ClientProto<T>
+{
     type Request = P::Request;
     type Response = P::Response;
     type Error = P::Error;
     type Future = ClientFuture<T, P>;
 
     fn call(&mut self, req: P::Request) -> Self::Future {
-        ClientFuture {
-            inner: self.inner.call(Message::WithoutBody(req))
-        }
+        ClientFuture { inner: self.inner.call(Message::WithoutBody(req)) }
     }
 }
 
-pub struct ClientFuture<T, P> where T: 'static, P: ClientProto<T> {
-    inner: <<LiftProto<P> as BindClient<StreamingPipeline<MyStream<P::Error>>, T>>::BindClient
-            as Service>::Future
+pub struct ClientFuture<T, P>
+    where T: 'static,
+          P: ClientProto<T>
+{
+    inner: <<LiftProto<P> as BindClient<StreamingPipeline<MyStream<P::Error>>,
+                                                        T>>::BindClient as Service>::Future,
 }
 
-impl<T, P> Future for ClientFuture<T, P> where P: ClientProto<T> {
+impl<T, P> Future for ClientFuture<T, P>
+    where P: ClientProto<T>
+{
     type Item = P::Response;
     type Error = P::Error;
 

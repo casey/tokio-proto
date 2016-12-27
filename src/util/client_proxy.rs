@@ -25,9 +25,7 @@ pub struct ClientProxy<R, S, E> {
 
 impl<R, S, E> Clone for ClientProxy<R, S, E> {
     fn clone(&self) -> Self {
-        ClientProxy {
-            tx: self.tx.clone(),
-        }
+        ClientProxy { tx: self.tx.clone() }
     }
 }
 
@@ -68,8 +66,7 @@ impl<R, S, E: From<io::Error>> Service for ClientProxy<R, S, E> {
         let (tx, rx) = oneshot::channel();
 
         // TODO: handle error
-        match mpsc::UnboundedSender::send(&mut self.tx,
-                                          Ok((request, tx))) {
+        match mpsc::UnboundedSender::send(&mut self.tx, Ok((request, tx))) {
             Ok(()) => {}
             Err(_) => panic!("receiving end of client is gone"),
         }
@@ -79,7 +76,7 @@ impl<R, S, E: From<io::Error>> Service for ClientProxy<R, S, E> {
 }
 
 impl<T, E> Future for Response<T, E>
-    where E: From<io::Error>,
+    where E: From<io::Error>
 {
     type Item = T;
     type Error = E;

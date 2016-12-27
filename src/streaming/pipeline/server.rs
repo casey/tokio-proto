@@ -39,9 +39,8 @@ pub trait ServerProto<T: 'static>: 'static {
     type Error: From<io::Error> + 'static;
 
     /// The frame transport, which usually take `T` as a parameter.
-    type Transport:
-        Transport<Item = Frame<Self::Request, Self::RequestBody, Self::Error>,
-                  SinkItem = Frame<Self::Response, Self::ResponseBody, Self::Error>>;
+    type Transport: Transport<Item = Frame<Self::Request, Self::RequestBody, Self::Error>,
+              SinkItem = Frame<Self::Response, Self::ResponseBody, Self::Error>>;
 
     /// A future for initializing a transport from an I/O object.
     ///
@@ -53,10 +52,10 @@ pub trait ServerProto<T: 'static>: 'static {
     fn bind_transport(&self, io: T) -> Self::BindTransport;
 }
 
-impl<P, T, B> BindServer<super::StreamingPipeline<B>, T> for P where
-    P: ServerProto<T>,
-    T: 'static,
-    B: Stream<Item = P::ResponseBody, Error = P::Error>,
+impl<P, T, B> BindServer<super::StreamingPipeline<B>, T> for P
+    where P: ServerProto<T>,
+          T: 'static,
+          B: Stream<Item = P::ResponseBody, Error = P::Error>
 {
     type ServiceRequest = Message<P::Request, Body<P::RequestBody, P::Error>>;
     type ServiceResponse = Message<P::Response, B>;
@@ -81,8 +80,10 @@ impl<P, T, B> BindServer<super::StreamingPipeline<B>, T> for P where
     }
 }
 
-struct Dispatch<S, T, P> where
-    T: 'static, P: ServerProto<T>, S: Service
+struct Dispatch<S, T, P>
+    where T: 'static,
+          P: ServerProto<T>,
+          S: Service
 {
     // The service handling the connection
     service: S,
@@ -95,13 +96,13 @@ enum InFlight<F: Future> {
     Done(Result<F::Item, F::Error>),
 }
 
-impl<P, T, B, S> super::advanced::Dispatch for Dispatch<S, T, P> where
-    P: ServerProto<T>,
-    T: 'static,
-    B: Stream<Item = P::ResponseBody, Error = P::Error>,
-    S: Service<Request = Message<P::Request, Body<P::RequestBody, P::Error>>,
-               Response = Message<P::Response, B>,
-               Error = P::Error>,
+impl<P, T, B, S> super::advanced::Dispatch for Dispatch<S, T, P>
+    where P: ServerProto<T>,
+          T: 'static,
+          B: Stream<Item = P::ResponseBody, Error = P::Error>,
+          S: Service<Request = Message<P::Request, Body<P::RequestBody, P::Error>>,
+                     Response = Message<P::Response, B>,
+                     Error = P::Error>
 {
     type Io = T;
     type In = P::Response;
@@ -117,9 +118,10 @@ impl<P, T, B, S> super::advanced::Dispatch for Dispatch<S, T, P> where
     }
 
     fn dispatch(&mut self,
-                request: PipelineMessage<Self::Out, Body<Self::BodyOut, Self::Error>, Self::Error>)
-                -> io::Result<()>
-    {
+                request: PipelineMessage<Self::Out,
+                                         Body<Self::BodyOut, Self::Error>,
+                                         Self::Error>)
+                -> io::Result<()> {
         if let Ok(request) = request {
             let response = self.service.call(request);
             self.in_flight.push_back(InFlight::Active(response));
@@ -130,14 +132,15 @@ impl<P, T, B, S> super::advanced::Dispatch for Dispatch<S, T, P> where
         Ok(())
     }
 
-    fn poll(&mut self) -> Poll<Option<PipelineMessage<Self::In, Self::Stream, Self::Error>>, io::Error> {
+    fn poll(&mut self)
+            -> Poll<Option<PipelineMessage<Self::In, Self::Stream, Self::Error>>, io::Error> {
         for slot in self.in_flight.iter_mut() {
             slot.poll();
         }
 
         match self.in_flight.front() {
             Some(&InFlight::Done(_)) => {}
-            _ => return Ok(Async::NotReady)
+            _ => return Ok(Async::NotReady),
         }
 
         match self.in_flight.pop_front() {

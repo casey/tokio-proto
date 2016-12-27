@@ -55,8 +55,7 @@ fn test_streaming_request_body() {
 
     let (mut tx, rx) = mpsc::channel(1);
 
-    let pong = service.call(Message::WithBody("ping",
-                                              rx.then(|r| r.unwrap()).boxed()));
+    let pong = service.call(Message::WithBody("ping", rx.then(|r| r.unwrap()).boxed()));
 
     assert_eq!("ping", mock.next_write().unwrap_msg());
 
@@ -76,8 +75,7 @@ fn test_streaming_request_body() {
 
 #[test]
 #[ignore]
-fn test_streaming_response_body() {
-}
+fn test_streaming_response_body() {}
 
 #[test]
 fn test_streaming_client_dropped() {
@@ -86,8 +84,7 @@ fn test_streaming_client_dropped() {
 
         let (tx, rx) = mpsc::channel(1);
 
-        let pong = service.call(Message::WithBody("ping",
-                                                  rx.then(|r| r.unwrap()).boxed()));
+        let pong = service.call(Message::WithBody("ping", rx.then(|r| r.unwrap()).boxed()));
         (tx, mock, pong, _other)
     };
 

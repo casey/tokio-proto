@@ -35,10 +35,9 @@ pub trait ClientProto<T: 'static>: 'static {
     type Error: From<io::Error> + 'static;
 
     /// The frame transport, which usually take `T` as a parameter.
-    type Transport:
-        Transport<Self::ResponseBody,
-                  Item = Frame<Self::Response, Self::ResponseBody, Self::Error>,
-                  SinkItem = Frame<Self::Request, Self::RequestBody, Self::Error>>;
+    type Transport: Transport<Self::ResponseBody,
+              Item = Frame<Self::Response, Self::ResponseBody, Self::Error>,
+              SinkItem = Frame<Self::Request, Self::RequestBody, Self::Error>>;
 
     /// A future for initializing a transport from an I/O object.
     ///
@@ -50,10 +49,10 @@ pub trait ClientProto<T: 'static>: 'static {
     fn bind_transport(&self, io: T) -> Self::BindTransport;
 }
 
-impl<P, T, B> BindClient<StreamingMultiplex<B>, T> for P where
-    P: ClientProto<T>,
-    T: 'static,
-    B: Stream<Item = P::RequestBody, Error = P::Error> + 'static,
+impl<P, T, B> BindClient<StreamingMultiplex<B>, T> for P
+    where P: ClientProto<T>,
+          T: 'static,
+          B: Stream<Item = P::RequestBody, Error = P::Error> + 'static
 {
     type ServiceRequest = Message<P::Request, B>;
     type ServiceResponse = Message<P::Response, Body<P::ResponseBody, P::Error>>;
@@ -64,18 +63,21 @@ impl<P, T, B> BindClient<StreamingMultiplex<B>, T> for P where
     fn bind_client(&self, handle: &Handle, io: T) -> Self::BindClient {
         let (client, rx) = client_proxy::pair();
 
-        let task = self.bind_transport(io).into_future().and_then(|transport| {
-            let dispatch: Dispatch<P, T, B> = Dispatch {
-                transport: transport,
-                requests: rx,
-                in_flight: HashMap::new(),
-                next_request_id: 0,
-            };
-            Multiplex::new(dispatch)
-        }).map_err(|e| {
-            // TODO: where to punt this error to?
-            debug!("multiplex task failed with error; err={:?}", e);
-        });
+        let task = self.bind_transport(io)
+            .into_future()
+            .and_then(|transport| {
+                let dispatch: Dispatch<P, T, B> = Dispatch {
+                    transport: transport,
+                    requests: rx,
+                    in_flight: HashMap::new(),
+                    next_request_id: 0,
+                };
+                Multiplex::new(dispatch)
+            })
+            .map_err(|e| {
+                // TODO: where to punt this error to?
+                debug!("multiplex task failed with error; err={:?}", e);
+            });
 
         // Spawn the task
         handle.spawn(task);
@@ -85,10 +87,10 @@ impl<P, T, B> BindClient<StreamingMultiplex<B>, T> for P where
     }
 }
 
-struct Dispatch<P, T, B> where
-    P: ClientProto<T> + BindClient<StreamingMultiplex<B>, T>,
-    T: 'static,
-    B: Stream<Item = P::RequestBody, Error = P::Error> + 'static,
+struct Dispatch<P, T, B>
+    where P: ClientProto<T> + BindClient<StreamingMultiplex<B>, T>,
+          T: 'static,
+          B: Stream<Item = P::RequestBody, Error = P::Error> + 'static
 {
     transport: P::Transport,
     requests: Receiver<P::ServiceRequest, P::ServiceResponse, P::Error>,
@@ -96,10 +98,10 @@ struct Dispatch<P, T, B> where
     next_request_id: u64,
 }
 
-impl<P, T, B> super::advanced::Dispatch for Dispatch<P, T, B> where
-    P: ClientProto<T>,
-    T: 'static,
-    B: Stream<Item = P::RequestBody, Error = P::Error> + 'static,
+impl<P, T, B> super::advanced::Dispatch for Dispatch<P, T, B>
+    where P: ClientProto<T>,
+          T: 'static,
+          B: Stream<Item = P::RequestBody, Error = P::Error> + 'static
 {
     type Io = T;
     type In = P::Request;
@@ -108,13 +110,17 @@ impl<P, T, B> super::advanced::Dispatch for Dispatch<P, T, B> where
     type BodyOut = P::ResponseBody;
     type Error = P::Error;
     type Stream = B;
-        type Transport = P::Transport;
+    type Transport = P::Transport;
 
     fn transport(&mut self) -> &mut Self::Transport {
         &mut self.transport
     }
 
-    fn dispatch(&mut self, message: MultiplexMessage<Self::Out, Body<Self::BodyOut, Self::Error>, Self::Error>) -> io::Result<()> {
+    fn dispatch(&mut self,
+                message: MultiplexMessage<Self::Out,
+                                          Body<Self::BodyOut, Self::Error>,
+                                          Self::Error>)
+                -> io::Result<()> {
         let MultiplexMessage { id, message, solo } = message;
 
         assert!(!solo);
@@ -176,10 +182,10 @@ impl<P, T, B> super::advanced::Dispatch for Dispatch<P, T, B> where
     }
 }
 
-impl<P, T, B> Drop for Dispatch<P, T, B> where
-    P: ClientProto<T> + BindClient<StreamingMultiplex<B>, T>,
-    T: 'static,
-    B: Stream<Item = P::RequestBody, Error = P::Error> + 'static,
+impl<P, T, B> Drop for Dispatch<P, T, B>
+    where P: ClientProto<T> + BindClient<StreamingMultiplex<B>, T>,
+          T: 'static,
+          B: Stream<Item = P::RequestBody, Error = P::Error> + 'static
 {
     fn drop(&mut self) {
         if !self.in_flight.is_empty() {

@@ -15,19 +15,18 @@ use super::frame_buf::{FrameBuf, FrameDeque};
 use super::{Frame, RequestId, Transport};
 use buffer_one::BufferOne;
 
-/*
- * TODO:
- *
- * - Handle errors correctly
- *    * When the FramedIo returns an error, how is it handled?
- *    * Is it sent to the dispatch?
- *    * Is it sent to the body?
- *    * What happens if there are in-flight *in* bodies
- *    * What happens if the out message is buffered?
- * - [BUG] Can only poll from body sender FutureSender in `flush`
- * - Move constants to configuration settings
- *
- */
+// TODO:
+//
+// - Handle errors correctly
+//    * When the FramedIo returns an error, how is it handled?
+//    * Is it sent to the dispatch?
+//    * Is it sent to the body?
+//    * What happens if there are in-flight *in* bodies
+//    * What happens if the out message is buffered?
+// - [BUG] Can only poll from body sender FutureSender in `flush`
+// - Move constants to configuration settings
+//
+//
 
 /// The max number of buffered frames that the connection can support. Once
 /// this number is reached.
@@ -40,7 +39,9 @@ const MAX_BUFFERED_FRAMES: usize = 128;
 /// Provides protocol multiplexing functionality in a generic way over clients
 /// and servers. Used internally by `multiplex::Client` and
 /// `multiplex::Server`.
-pub struct Multiplex<T> where T: Dispatch {
+pub struct Multiplex<T>
+    where T: Dispatch
+{
     // True as long as the connection has more request frames to read.
     run: bool,
 
@@ -160,32 +161,37 @@ pub trait Dispatch {
 
     /// Transport type
     type Transport: Transport<Self::BodyOut,
-                              Item = Frame<Self::Out, Self::BodyOut, Self::Error>,
-                              SinkItem = Frame<Self::In, Self::BodyIn, Self::Error>>;
+              Item = Frame<Self::Out, Self::BodyOut, Self::Error>,
+              SinkItem = Frame<Self::In, Self::BodyIn, Self::Error>>;
 
     /// Mutable reference to the transport
     fn transport(&mut self) -> &mut Self::Transport;
 
     /// Poll the next available message
-    fn poll(&mut self) -> Poll<Option<MultiplexMessage<Self::In, Self::Stream, Self::Error>>, io::Error>;
+    fn poll(&mut self)
+            -> Poll<Option<MultiplexMessage<Self::In, Self::Stream, Self::Error>>, io::Error>;
 
     /// The `Dispatch` is ready to accept another message
     fn poll_ready(&self) -> Async<()>;
 
     /// Process an out message
-    fn dispatch(&mut self, message: MultiplexMessage<Self::Out, Body<Self::BodyOut, Self::Error>, Self::Error>) -> io::Result<()>;
+    fn dispatch(&mut self,
+                message: MultiplexMessage<Self::Out,
+                                          Body<Self::BodyOut, Self::Error>,
+                                          Self::Error>)
+                -> io::Result<()>;
 
     /// Cancel interest in the exchange identified by RequestId
     fn cancel(&mut self, request_id: RequestId) -> io::Result<()>;
 }
 
-/*
- *
- * ===== impl Multiplex =====
- *
- */
+// ===== impl Multiplex =====
+//
+//
 
-impl<T> Multiplex<T> where T: Dispatch {
+impl<T> Multiplex<T>
+    where T: Dispatch
+{
     /// Create a new pipeline `Multiplex` dispatcher with the given service and
     /// transport
     pub fn new(dispatch: T) -> Multiplex<T> {
@@ -329,8 +335,7 @@ impl<T> Multiplex<T> where T: Dispatch {
                            message: Message<T::Out, Body<T::BodyOut, T::Error>>,
                            body: Option<mpsc::Sender<Result<T::BodyOut, T::Error>>>,
                            solo: bool)
-                           -> io::Result<()>
-    {
+                           -> io::Result<()> {
         trace!("   --> process message; body={:?}", body.is_some());
 
         match self.exchanges.entry(id) {
@@ -367,9 +372,7 @@ impl<T> Multiplex<T> where T: Dispatch {
                     assert!(self.dispatch_deque.is_empty());
 
                     // Create the exchange state
-                    let mut exchange = Exchange::new(
-                        Request::Out(None),
-                        self.frame_buf.deque());
+                    let mut exchange = Exchange::new(Request::Out(None), self.frame_buf.deque());
 
                     exchange.out_body = body;
 
@@ -393,9 +396,8 @@ impl<T> Multiplex<T> where T: Dispatch {
                     self.blocked_on_dispatch = true;
 
                     // Create the exchange state, including the buffered message
-                    let mut exchange = Exchange::new(
-                        Request::Out(Some(message)),
-                        self.frame_buf.deque());
+                    let mut exchange = Exchange::new(Request::Out(Some(message)),
+                                                     self.frame_buf.deque());
 
                     exchange.out_body = body;
 
@@ -468,7 +470,9 @@ impl<T> Multiplex<T> where T: Dispatch {
         Ok(())
     }
 
-    fn process_out_body_chunk(&mut self, id: RequestId, chunk: Result<Option<T::BodyOut>, T::Error>) {
+    fn process_out_body_chunk(&mut self,
+                              id: RequestId,
+                              chunk: Result<Option<T::BodyOut>, T::Error>) {
         trace!("process out body chunk; id={:?}", id);
 
         {
@@ -546,8 +550,7 @@ impl<T> Multiplex<T> where T: Dispatch {
                         id: RequestId,
                         message: Message<T::In, T::Stream>,
                         solo: bool)
-                        -> io::Result<()>
-    {
+                        -> io::Result<()> {
         let (message, body) = match message {
             Message::WithBody(message, rx) => (message, Some(rx)),
             Message::WithoutBody(message) => (message, None),
@@ -584,9 +587,7 @@ impl<T> Multiplex<T> where T: Dispatch {
             }
             Entry::Vacant(e) => {
                 // Create the exchange state
-                let mut exchange = Exchange::new(
-                    Request::In,
-                    self.frame_buf.deque());
+                let mut exchange = Exchange::new(Request::In, self.frame_buf.deque());
 
                 // Set the body receiver
                 exchange.in_body = body;
@@ -602,11 +603,7 @@ impl<T> Multiplex<T> where T: Dispatch {
         Ok(())
     }
 
-    fn write_in_error(&mut self,
-                      id: RequestId,
-                      error: T::Error)
-                      -> io::Result<()>
-    {
+    fn write_in_error(&mut self, id: RequestId, error: T::Error) -> io::Result<()> {
         if let Entry::Occupied(mut e) = self.exchanges.entry(id) {
             assert!(!e.get().responded, "exchange already responded");
 
@@ -620,7 +617,10 @@ impl<T> Multiplex<T> where T: Dispatch {
             assert!(e.get().is_complete());
 
             // Write the error frame
-            let frame = Frame::Error { id: id, error: error };
+            let frame = Frame::Error {
+                id: id,
+                error: error,
+            };
             try!(assert_send(&mut self.dispatch, frame));
             self.blocked_on_flush.wrote_frame();
 
@@ -638,8 +638,7 @@ impl<T> Multiplex<T> where T: Dispatch {
         self.scratch.clear();
 
         // Now, write the ready streams
-        'outer:
-        for (&id, exchange) in &mut self.exchanges {
+        'outer: for (&id, exchange) in &mut self.exchanges {
             trace!("   --> checking request {:?}", id);
 
             loop {
@@ -653,14 +652,20 @@ impl<T> Multiplex<T> where T: Dispatch {
                     Ok(Async::Ready(Some(chunk))) => {
                         trace!("   --> got chunk");
 
-                        let frame = Frame::Body { id: id, chunk: Some(chunk) };
+                        let frame = Frame::Body {
+                            id: id,
+                            chunk: Some(chunk),
+                        };
                         try!(assert_send(&mut self.dispatch, frame));
                         self.blocked_on_flush.wrote_frame();
                     }
                     Ok(Async::Ready(None)) => {
                         trace!("   --> end of stream");
 
-                        let frame = Frame::Body { id: id, chunk: None };
+                        let frame = Frame::Body {
+                            id: id,
+                            chunk: None,
+                        };
                         try!(assert_send(&mut self.dispatch, frame));
                         self.blocked_on_flush.wrote_frame();
 
@@ -672,7 +677,10 @@ impl<T> Multiplex<T> where T: Dispatch {
                         trace!("   --> got error");
 
                         // Write the error frame
-                        let frame = Frame::Error { id: id, error: error };
+                        let frame = Frame::Error {
+                            id: id,
+                            error: error,
+                        };
                         try!(assert_send(&mut self.dispatch, frame));
                         self.blocked_on_flush.wrote_frame();
 
@@ -733,7 +741,7 @@ impl<T> Multiplex<T> where T: Dispatch {
 }
 
 impl<T> Future for Multiplex<T>
-    where T: Dispatch,
+    where T: Dispatch
 {
     type Item = ();
     type Error = io::Error;
@@ -808,7 +816,9 @@ impl<T: Dispatch> Drop for Multiplex<T> {
 }
 
 impl<T: Dispatch> Exchange<T> {
-    fn new(request: Request<T>, deque: FrameDeque<Option<Result<T::BodyOut, T::Error>>>) -> Exchange<T> {
+    fn new(request: Request<T>,
+           deque: FrameDeque<Option<Result<T::BodyOut, T::Error>>>)
+           -> Exchange<T> {
         Exchange {
             request: request,
             responded: false,
@@ -841,10 +851,8 @@ impl<T: Dispatch> Exchange<T> {
     fn is_complete(&self) -> bool {
         // The exchange is completed if the response has been seen and bodies
         // in both directions are fully flushed
-        self.responded &&
-            self.out_body.is_none() &&
-            self.in_body.is_none() &&
-            self.request.is_none()
+        self.responded && self.out_body.is_none() && self.in_body.is_none() &&
+        self.request.is_none()
     }
 
     fn set_expect_response(&mut self, solo: bool) {
@@ -879,7 +887,7 @@ impl<T: Dispatch> Exchange<T> {
         {
             let sender = match self.out_body {
                 Some(ref mut v) => v,
-                _ =>  {
+                _ => {
                     return;
                 }
             };
@@ -938,7 +946,8 @@ impl<T: Dispatch> Exchange<T> {
             let sender = match self.out_body {
                 Some(ref mut sender) => sender,
                 None => {
-                    assert!(self.out_deque.is_empty(), "pending out frames but no sender");
+                    assert!(self.out_deque.is_empty(),
+                            "pending out frames but no sender");
                     return Ok(());
                 }
             };
@@ -983,7 +992,7 @@ impl<T: Dispatch> Exchange<T> {
                 }
 
                 if done {
-                    break
+                    break;
                 }
             }
         }
@@ -1033,11 +1042,9 @@ fn assert_send<T>(s: &mut T, item: T::SinkItem) -> Result<(), T::SinkError>
     }
 }
 
-/*
- *
- * ===== impl MultiplexMessage =====
- *
- */
+// ===== impl MultiplexMessage =====
+//
+//
 
 impl<T, B, E> MultiplexMessage<T, B, E> {
     /// Create a new MultiplexMessage
@@ -1063,9 +1070,7 @@ impl<T: Dispatch> Sink for DispatchSink<T> {
     type SinkItem = <T::Transport as Sink>::SinkItem;
     type SinkError = io::Error;
 
-    fn start_send(&mut self, item: Self::SinkItem)
-                  -> StartSend<Self::SinkItem, io::Error>
-    {
+    fn start_send(&mut self, item: Self::SinkItem) -> StartSend<Self::SinkItem, io::Error> {
         self.inner.transport().start_send(item)
     }
 

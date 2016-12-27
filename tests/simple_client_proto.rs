@@ -6,7 +6,7 @@ extern crate tokio_service;
 use std::str;
 use std::io::{self, ErrorKind, Write};
 
-use futures::{Future};
+use futures::Future;
 use tokio_core::io::{Io, Codec, Framed, EasyBuf};
 use tokio_core::reactor::Core;
 use tokio_proto::pipeline::ClientProto;
@@ -20,10 +20,9 @@ use tokio_proto::TcpClient;
 pub struct IntCodec;
 
 fn parse_u64(from: &[u8]) -> Result<u64, io::Error> {
-    Ok(str::from_utf8(from)
-       .map_err(|e| io::Error::new(ErrorKind::InvalidData, e))?
-       .parse()
-       .map_err(|e| io::Error::new(ErrorKind::InvalidData, e))?)
+    Ok(str::from_utf8(from).map_err(|e| io::Error::new(ErrorKind::InvalidData, e))?
+        .parse()
+        .map_err(|e| io::Error::new(ErrorKind::InvalidData, e))?)
 }
 
 impl Codec for IntCodec {
@@ -75,8 +74,7 @@ impl<T: Io + 'static> ClientProto<T> for IntProto {
     }
 }
 
-fn is_clone<T: Clone>(_: &T) {
-}
+fn is_clone<T: Clone>(_: &T) {}
 
 #[test]
 fn test_clone() {
@@ -84,7 +82,8 @@ fn test_clone() {
     if false {
         let core = Core::new().unwrap();
         let builder = TcpClient::new(IntProto);
-        let service = builder.connect(&"127.0.0.1:12345".parse().unwrap(), &core.handle()).wait().unwrap();
+        let service =
+            builder.connect(&"127.0.0.1:12345".parse().unwrap(), &core.handle()).wait().unwrap();
         is_clone(&service);
     }
 }

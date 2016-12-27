@@ -38,7 +38,9 @@ pub struct Connect<Kind, P> {
     handle: Handle,
 }
 
-impl<Kind, P> Future for Connect<Kind, P> where P: BindClient<Kind, TcpStream> {
+impl<Kind, P> Future for Connect<Kind, P>
+    where P: BindClient<Kind, TcpStream>
+{
     type Item = P::BindClient;
     type Error = io::Error;
 
@@ -48,7 +50,9 @@ impl<Kind, P> Future for Connect<Kind, P> where P: BindClient<Kind, TcpStream> {
     }
 }
 
-impl<Kind, P> TcpClient<Kind, P> where P: BindClient<Kind, TcpStream> {
+impl<Kind, P> TcpClient<Kind, P>
+    where P: BindClient<Kind, TcpStream>
+{
     /// Create a builder for the given client protocol.
     ///
     /// To connect to a service, you need a *client protocol* implementation;
@@ -56,7 +60,7 @@ impl<Kind, P> TcpClient<Kind, P> where P: BindClient<Kind, TcpStream> {
     pub fn new(protocol: P) -> TcpClient<Kind, P> {
         TcpClient {
             _kind: PhantomData,
-            proto: Arc::new(protocol)
+            proto: Arc::new(protocol),
         }
     }
 

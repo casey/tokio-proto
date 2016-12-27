@@ -40,8 +40,12 @@ mod lift {
         fn poll(&mut self) -> Poll<Option<Self::Item>, io::Error> {
             let item = try_ready!(self.0.poll());
             Ok(item.map(|msg| {
-                Frame::Message { message: msg, body: false }
-            }).into())
+                    Frame::Message {
+                        message: msg,
+                        body: false,
+                    }
+                })
+                .into())
         }
     }
 
@@ -49,15 +53,17 @@ mod lift {
         type SinkItem = Frame<T::SinkItem, (), E>;
         type SinkError = io::Error;
 
-        fn start_send(&mut self, request: Self::SinkItem)
-                      -> StartSend<Self::SinkItem, io::Error> {
+        fn start_send(&mut self, request: Self::SinkItem) -> StartSend<Self::SinkItem, io::Error> {
             if let Frame::Message { message, body } = request {
                 if !body {
                     match try!(self.0.start_send(message)) {
                         AsyncSink::Ready => return Ok(AsyncSink::Ready),
                         AsyncSink::NotReady(msg) => {
-                            let msg = Frame::Message { message: msg, body: false };
-                            return Ok(AsyncSink::NotReady(msg))
+                            let msg = Frame::Message {
+                                message: msg,
+                                body: false,
+                            };
+                            return Ok(AsyncSink::NotReady(msg));
                         }
                     }
                 }
@@ -72,7 +78,8 @@ mod lift {
 
     impl<T, E: 'static> Transport for LiftTransport<T, E>
         where T: 'static + Stream<Error = io::Error> + Sink<SinkError = io::Error>
-    {}
+    {
+}
 
     impl<A, F, E> LiftBind<A, F, E> {
         pub fn lift(f: F) -> LiftBind<A, F, E> {
@@ -83,7 +90,9 @@ mod lift {
         }
     }
 
-    impl<A, F, E> Future for LiftBind<A, F, E> where F: Future<Error = io::Error> {
+    impl<A, F, E> Future for LiftBind<A, F, E>
+        where F: Future<Error = io::Error>
+    {
         type Item = LiftTransport<F::Item, E>;
         type Error = io::Error;
 

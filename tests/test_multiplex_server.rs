@@ -30,9 +30,7 @@ use support::service::simple_service;
 
 #[test]
 fn test_immediate_done() {
-    let service = simple_service(|_| {
-        future::ok(Message::WithoutBody("goodbye"))
-    });
+    let service = simple_service(|_| future::ok(Message::WithoutBody("goodbye")));
 
     let (mut mock, _other) = mock::multiplex_server(service);
     mock.allow_and_assert_drop();
@@ -208,9 +206,7 @@ fn test_multiplexing_while_transport_not_writable() {
 
 #[test]
 fn test_repeatedly_flushes_messages() {
-    let service = simple_service(move |_| {
-        future::ok(Message::WithoutBody("goodbye"))
-    });
+    let service = simple_service(move |_| future::ok(Message::WithoutBody("goodbye")));
 
     let (mut mock, _other) = mock::multiplex_server(service);
     mock.send(msg(0, "hello"));
@@ -233,7 +229,7 @@ fn test_reaching_max_in_flight_requests() {
         let fut = rx.borrow_mut().next().unwrap().unwrap();
         let fut: oneshot::Receiver<_> = fut;
         fut.map_err(|_| io::Error::new(io::ErrorKind::BrokenPipe, "broken pipe"))
-           .and_then(|res| res)
+            .and_then(|res| res)
     });
 
     let mut responses = vec![];
@@ -335,11 +331,10 @@ fn test_basic_streaming_request_body_read_then_respond() {
         let mut tx = tx.clone();
 
         body.for_each(move |chunk| {
-            (&mut tx).send(chunk).unwrap();
-            Ok(())
-        }).and_then(|_| {
-            Ok(Message::WithoutBody("hi2u"))
-        })
+                (&mut tx).send(chunk).unwrap();
+                Ok(())
+            })
+            .and_then(|_| Ok(Message::WithoutBody("hi2u")))
     });
 
     let (mut mock, _other) = mock::multiplex_server(service);
@@ -348,14 +343,20 @@ fn test_basic_streaming_request_body_read_then_respond() {
     let mut rx = rx.wait();
     for i in 0..5 {
         // Send a body chunk
-        mock.send(Frame::Body { id: 2, chunk: Some(i) });
+        mock.send(Frame::Body {
+            id: 2,
+            chunk: Some(i),
+        });
 
         // Assert service processed chunk
         assert_eq!(i, rx.next().unwrap().unwrap());
     }
 
     // Send end-of-stream notification
-    mock.send(Frame::Body { id: 2, chunk: None });
+    mock.send(Frame::Body {
+        id: 2,
+        chunk: None,
+    });
 
     let wr = mock.next_write();
     assert_eq!(2, wr.request_id());
@@ -378,11 +379,10 @@ fn test_interleaving_request_body_chunks() {
         assert_eq!(req, &format!("have-body-{}", i));
 
         body.for_each(move |chunk| {
-            (&mut tx).send((i, chunk)).unwrap();
-            Ok(())
-        }).and_then(|_| {
-            Ok(Message::WithoutBody("hi2u"))
-        })
+                (&mut tx).send((i, chunk)).unwrap();
+                Ok(())
+            })
+            .and_then(|_| Ok(Message::WithoutBody("hi2u")))
     });
 
     let (mut mock, _other) = mock::multiplex_server(service);
@@ -393,29 +393,47 @@ fn test_interleaving_request_body_chunks() {
     for i in 0..5 {
         if i % 2 == 0 {
             // Send a body chunk
-            mock.send(Frame::Body { id: 2, chunk: Some(i) });
+            mock.send(Frame::Body {
+                id: 2,
+                chunk: Some(i),
+            });
             assert_eq!((0, i), rx.next().unwrap().unwrap());
 
-            mock.send(Frame::Body { id: 4, chunk: Some(i) });
+            mock.send(Frame::Body {
+                id: 4,
+                chunk: Some(i),
+            });
             assert_eq!((1, i), rx.next().unwrap().unwrap());
         } else {
-            mock.send(Frame::Body { id: 4, chunk: Some(i) });
+            mock.send(Frame::Body {
+                id: 4,
+                chunk: Some(i),
+            });
             assert_eq!((1, i), rx.next().unwrap().unwrap());
 
             // Send a body chunk
-            mock.send(Frame::Body { id: 2, chunk: Some(i) });
+            mock.send(Frame::Body {
+                id: 2,
+                chunk: Some(i),
+            });
             assert_eq!((0, i), rx.next().unwrap().unwrap());
         }
     }
 
     // Send end-of-stream notification
-    mock.send(Frame::Body { id: 2, chunk: None });
+    mock.send(Frame::Body {
+        id: 2,
+        chunk: None,
+    });
 
     let wr = mock.next_write();
     assert_eq!(2, wr.request_id());
     assert_eq!("hi2u", wr.unwrap_msg());
 
-    mock.send(Frame::Body { id: 4, chunk: None });
+    mock.send(Frame::Body {
+        id: 4,
+        chunk: None,
+    });
 
     let wr = mock.next_write();
     assert_eq!(4, wr.request_id());
@@ -426,16 +444,13 @@ fn test_interleaving_request_body_chunks() {
 }
 
 #[test]
-fn test_interleaving_response_body_chunks() {
-}
+fn test_interleaving_response_body_chunks() {}
 
 #[test]
-fn test_transport_provides_invalid_request_ids() {
-}
+fn test_transport_provides_invalid_request_ids() {}
 
 #[test]
-fn test_reaching_max_buffered_frames() {
-}
+fn test_reaching_max_buffered_frames() {}
 
 #[test]
 fn test_read_error_as_first_frame() {
@@ -457,16 +472,14 @@ fn test_read_error_as_first_frame() {
 }
 
 #[test]
-fn test_read_error_during_stream() {
-}
+fn test_read_error_during_stream() {}
 
 #[test]
 fn test_error_handling_before_message_dispatched() {
-    /*
-    let service = simple_service(|_| {
-        unimplemented!();
-    });
-    */
+    // let service = simple_service(|_| {
+    // unimplemented!();
+    // });
+    //
 }
 
 fn msg(id: RequestId, msg: &'static str) -> Frame<&'static str, u32, io::Error> {

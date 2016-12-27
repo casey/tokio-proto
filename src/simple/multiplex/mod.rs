@@ -37,9 +37,9 @@ mod lift {
         marker: PhantomData<(A, E)>,
     }
 
-    impl<T, InnerItem, E> Stream for LiftTransport<T, E> where
-        E: 'static,
-        T: Stream<Item = (RequestId, InnerItem), Error = io::Error>,
+    impl<T, InnerItem, E> Stream for LiftTransport<T, E>
+        where E: 'static,
+              T: Stream<Item = (RequestId, InnerItem), Error = io::Error>
     {
         type Item = Frame<InnerItem, (), E>;
         type Error = io::Error;
@@ -50,23 +50,23 @@ mod lift {
                 None => return Ok(None.into()),
             };
             Ok(Some(Frame::Message {
-                message: msg,
-                body: false,
-                solo: false,
-                id: id,
-            }).into())
+                    message: msg,
+                    body: false,
+                    solo: false,
+                    id: id,
+                })
+                .into())
         }
     }
 
-    impl<T, InnerSink, E> Sink for LiftTransport<T, E> where
-        E: 'static,
-        T: Sink<SinkItem = (RequestId, InnerSink), SinkError = io::Error>
+    impl<T, InnerSink, E> Sink for LiftTransport<T, E>
+        where E: 'static,
+              T: Sink<SinkItem = (RequestId, InnerSink), SinkError = io::Error>
     {
         type SinkItem = Frame<InnerSink, (), E>;
         type SinkError = io::Error;
 
-        fn start_send(&mut self, request: Self::SinkItem)
-                      -> StartSend<Self::SinkItem, io::Error> {
+        fn start_send(&mut self, request: Self::SinkItem) -> StartSend<Self::SinkItem, io::Error> {
             if let Frame::Message { message, id, body, solo } = request {
                 if !body && !solo {
                     match try!(self.0.start_send((id, message))) {
@@ -78,7 +78,7 @@ mod lift {
                                 body: false,
                                 solo: false,
                             };
-                            return Ok(AsyncSink::NotReady(msg))
+                            return Ok(AsyncSink::NotReady(msg));
                         }
                     }
                 }
@@ -91,12 +91,13 @@ mod lift {
         }
     }
 
-    impl<T, InnerItem, InnerSink, E> Transport<()> for LiftTransport<T, E> where
-        E: 'static,
-        T: 'static,
-        T: Stream<Item = (RequestId, InnerItem), Error = io::Error>,
-        T: Sink<SinkItem = (RequestId, InnerSink), SinkError = io::Error>
-    {}
+    impl<T, InnerItem, InnerSink, E> Transport<()> for LiftTransport<T, E>
+        where E: 'static,
+              T: 'static,
+              T: Stream<Item = (RequestId, InnerItem), Error = io::Error>,
+              T: Sink<SinkItem = (RequestId, InnerSink), SinkError = io::Error>
+    {
+}
 
     impl<A, F, E> LiftBind<A, F, E> {
         pub fn lift(f: F) -> LiftBind<A, F, E> {
@@ -107,7 +108,9 @@ mod lift {
         }
     }
 
-    impl<A, F, E> Future for LiftBind<A, F, E> where F: Future<Error = io::Error> {
+    impl<A, F, E> Future for LiftBind<A, F, E>
+        where F: Future<Error = io::Error>
+    {
         type Item = LiftTransport<F::Item, E>;
         type Error = io::Error;
 

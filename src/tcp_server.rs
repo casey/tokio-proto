@@ -38,8 +38,8 @@ pub struct TcpServer<Kind, P> {
     addr: SocketAddr,
 }
 
-impl<Kind, P> TcpServer<Kind, P> where
-    P: BindServer<Kind, TcpStream> + Send + Sync + 'static
+impl<Kind, P> TcpServer<Kind, P>
+    where P: BindServer<Kind, TcpStream> + Send + Sync + 'static
 {
     /// Starts building a server for the given protocol and address, with
     /// default configuration.
@@ -79,10 +79,10 @@ impl<Kind, P> TcpServer<Kind, P> where
     /// Start up the server, providing the given service on it.
     ///
     /// This method will block the current thread until the server is shut down.
-    pub fn serve<S>(&self, new_service: S) where
-        S: NewService<Request = P::ServiceRequest,
-                      Response = P::ServiceResponse,
-                      Error = P::ServiceError> + Send + Sync + 'static,
+    pub fn serve<S>(&self, new_service: S)
+        where S: NewService<Request = P::ServiceRequest,
+                            Response = P::ServiceResponse,
+                            Error = P::ServiceError> + Send + Sync + 'static
     {
         let new_service = Arc::new(new_service);
         self.with_handle(move |_| new_service.clone())
@@ -96,25 +96,28 @@ impl<Kind, P> TcpServer<Kind, P> where
     /// turned used to make a new service instance for each incoming connection.
     ///
     /// This method will block the current thread until the server is shut down.
-    pub fn with_handle<F, S>(&self, new_service: F) where
-        F: Fn(&Handle) -> S + Send + Sync + 'static,
-        S: NewService<Request = P::ServiceRequest,
-                      Response = P::ServiceResponse,
-                      Error = P::ServiceError> + Send + Sync + 'static,
+    pub fn with_handle<F, S>(&self, new_service: F)
+        where F: Fn(&Handle) -> S + Send + Sync + 'static,
+              S: NewService<Request = P::ServiceRequest,
+                            Response = P::ServiceResponse,
+                            Error = P::ServiceError> + Send + Sync + 'static
     {
         let proto = self.proto.clone();
         let new_service = Arc::new(new_service);
         let addr = self.addr;
         let workers = self.threads;
 
-        let threads = (0..self.threads - 1).map(|i| {
-            let proto = proto.clone();
-            let new_service = new_service.clone();
+        let threads = (0..self.threads - 1)
+            .map(|i| {
+                let proto = proto.clone();
+                let new_service = new_service.clone();
 
-            thread::Builder::new().name(format!("worker{}", i)).spawn(move || {
-                serve(proto, addr, workers, &*new_service)
-            }).unwrap()
-        }).collect::<Vec<_>>();
+                thread::Builder::new()
+                    .name(format!("worker{}", i))
+                    .spawn(move || serve(proto, addr, workers, &*new_service))
+                    .unwrap()
+            })
+            .collect::<Vec<_>>();
 
         serve(proto, addr, workers, &*new_service);
 
@@ -129,7 +132,7 @@ fn serve<P, Kind, F, S>(binder: Arc<P>, addr: SocketAddr, workers: usize, new_se
           F: Fn(&Handle) -> S,
           S: NewService<Request = P::ServiceRequest,
                         Response = P::ServiceResponse,
-                        Error = P::ServiceError> + 'static,
+                        Error = P::ServiceError> + 'static
 {
     let mut core = Core::new().unwrap();
     let handle = core.handle();
@@ -149,9 +152,7 @@ fn serve<P, Kind, F, S>(binder: Arc<P>, addr: SocketAddr, workers: usize, new_se
     core.run(server).unwrap();
 }
 
-fn listener(addr: &SocketAddr,
-            workers: usize,
-            handle: &Handle) -> io::Result<TcpListener> {
+fn listener(addr: &SocketAddr, workers: usize, handle: &Handle) -> io::Result<TcpListener> {
     let listener = match *addr {
         SocketAddr::V4(_) => try!(net2::TcpBuilder::new_v4()),
         SocketAddr::V6(_) => try!(net2::TcpBuilder::new_v6()),
@@ -159,9 +160,7 @@ fn listener(addr: &SocketAddr,
     try!(configure_tcp(workers, &listener));
     try!(listener.reuse_address(true));
     try!(listener.bind(addr));
-    listener.listen(1024).and_then(|l| {
-        TcpListener::from_listener(l, addr, handle)
-    })
+    listener.listen(1024).and_then(|l| TcpListener::from_listener(l, addr, handle))
 }
 
 #[cfg(unix)]

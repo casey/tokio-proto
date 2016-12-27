@@ -49,7 +49,8 @@ impl<S: Sink> BufferOne<S> {
             }
 
             // Unpark any pending tasks
-            self.task.take()
+            self.task
+                .take()
                 .map(|t| t.unpark());
         }
 
@@ -58,7 +59,9 @@ impl<S: Sink> BufferOne<S> {
 }
 
 // Forwarding impl of Stream from the underlying sink
-impl<S> Stream for BufferOne<S> where S: Sink + Stream {
+impl<S> Stream for BufferOne<S>
+    where S: Sink + Stream
+{
     type Item = S::Item;
     type Error = S::Error;
 

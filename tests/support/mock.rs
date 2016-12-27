@@ -27,7 +27,7 @@ struct MockProtocol<T>(RefCell<Option<MockTransport<T>>>);
 impl<T, U, I> pipeline::ClientProto<I> for MockProtocol<pipeline::Frame<T, U, io::Error>>
     where T: 'static,
           U: 'static,
-          I: Io + 'static,
+          I: Io + 'static
 {
     type Request = T;
     type RequestBody = U;
@@ -37,7 +37,8 @@ impl<T, U, I> pipeline::ClientProto<I> for MockProtocol<pipeline::Frame<T, U, io
     type Transport = MockTransport<pipeline::Frame<T, U, io::Error>>;
     type BindTransport = Result<Self::Transport, io::Error>;
 
-    fn bind_transport(&self, _io: I)
+    fn bind_transport(&self,
+                      _io: I)
                       -> Result<MockTransport<pipeline::Frame<T, U, io::Error>>, io::Error> {
         Ok(self.0.borrow_mut().take().unwrap())
     }
@@ -46,7 +47,7 @@ impl<T, U, I> pipeline::ClientProto<I> for MockProtocol<pipeline::Frame<T, U, io
 impl<T, U, I> multiplex::ClientProto<I> for MockProtocol<multiplex::Frame<T, U, io::Error>>
     where T: 'static,
           U: 'static,
-          I: Io + 'static,
+          I: Io + 'static
 {
     type Request = T;
     type RequestBody = U;
@@ -56,7 +57,8 @@ impl<T, U, I> multiplex::ClientProto<I> for MockProtocol<multiplex::Frame<T, U, 
     type Transport = MockTransport<multiplex::Frame<T, U, io::Error>>;
     type BindTransport = Result<Self::Transport, io::Error>;
 
-    fn bind_transport(&self, _io: I)
+    fn bind_transport(&self,
+                      _io: I)
                       -> Result<MockTransport<multiplex::Frame<T, U, io::Error>>, io::Error> {
         Ok(self.0.borrow_mut().take().unwrap())
     }
@@ -65,7 +67,7 @@ impl<T, U, I> multiplex::ClientProto<I> for MockProtocol<multiplex::Frame<T, U, 
 impl<T, U, I> pipeline::ServerProto<I> for MockProtocol<pipeline::Frame<T, U, io::Error>>
     where T: 'static,
           U: 'static,
-          I: Io + 'static,
+          I: Io + 'static
 {
     type Request = T;
     type RequestBody = U;
@@ -75,7 +77,8 @@ impl<T, U, I> pipeline::ServerProto<I> for MockProtocol<pipeline::Frame<T, U, io
     type Transport = MockTransport<pipeline::Frame<T, U, io::Error>>;
     type BindTransport = Result<Self::Transport, io::Error>;
 
-    fn bind_transport(&self, _io: I)
+    fn bind_transport(&self,
+                      _io: I)
                       -> Result<MockTransport<pipeline::Frame<T, U, io::Error>>, io::Error> {
         Ok(self.0.borrow_mut().take().unwrap())
     }
@@ -84,7 +87,7 @@ impl<T, U, I> pipeline::ServerProto<I> for MockProtocol<pipeline::Frame<T, U, io
 impl<T, U, I> multiplex::ServerProto<I> for MockProtocol<multiplex::Frame<T, U, io::Error>>
     where T: 'static,
           U: 'static,
-          I: Io + 'static,
+          I: Io + 'static
 {
     type Request = T;
     type RequestBody = U;
@@ -94,7 +97,8 @@ impl<T, U, I> multiplex::ServerProto<I> for MockProtocol<multiplex::Frame<T, U, 
     type Transport = MockTransport<multiplex::Frame<T, U, io::Error>>;
     type BindTransport = Result<Self::Transport, io::Error>;
 
-    fn bind_transport(&self, _io: I)
+    fn bind_transport(&self,
+                      _io: I)
                       -> Result<MockTransport<multiplex::Frame<T, U, io::Error>>, io::Error> {
         Ok(self.0.borrow_mut().take().unwrap())
     }
@@ -190,10 +194,7 @@ fn transport<T>() -> (MockTransportCtl<T>, MockProtocol<T>) {
         tx: Some(tx2),
         rx: rx1.wait(),
     };
-    let transport = MockTransport {
-        tx: tx1,
-        rx: rx2,
-    };
+    let transport = MockTransport { tx: tx1, rx: rx2 };
     (ctl, MockProtocol(RefCell::new(Some(transport))))
 }
 
@@ -214,8 +215,7 @@ pub fn pipeline_client()
         Box<Service<Request = Message<&'static str, MockBodyStream>,
                     Response = Message<&'static str, Body<u32, io::Error>>,
                     Error = io::Error,
-                    Future = Response<Message<&'static str, Body<u32, io::Error>>,
-                                              io::Error>>>,
+                    Future = Response<Message<&'static str, Body<u32, io::Error>>, io::Error>>>,
         Box<Any>)
 {
     drop(env_logger::init());
@@ -242,11 +242,12 @@ pub fn pipeline_client()
     return (ctl, Box::new(service), Box::new(srv));
 }
 
-pub fn pipeline_server<S>(s: S)
-    -> (MockTransportCtl<pipeline::Frame<&'static str, u32, io::Error>>, Box<Any>)
+pub fn pipeline_server<S>
+    (s: S)
+     -> (MockTransportCtl<pipeline::Frame<&'static str, u32, io::Error>>, Box<Any>)
     where S: Service<Request = Message<&'static str, Body<u32, io::Error>>,
                      Response = Message<&'static str, MockBodyStream>,
-                     Error = io::Error> + Send + 'static,
+                     Error = io::Error> + Send + 'static
 {
     drop(env_logger::init());
 
@@ -273,8 +274,7 @@ pub fn multiplex_client()
         Box<Service<Request = Message<&'static str, MockBodyStream>,
                     Response = Message<&'static str, Body<u32, io::Error>>,
                     Error = io::Error,
-                    Future = Response<Message<&'static str, Body<u32, io::Error>>,
-                                              io::Error>>>,
+                    Future = Response<Message<&'static str, Body<u32, io::Error>>, io::Error>>>,
         Box<Any>)
 {
     drop(env_logger::init());
@@ -301,11 +301,12 @@ pub fn multiplex_client()
     return (ctl, Box::new(service), Box::new(srv));
 }
 
-pub fn multiplex_server<S>(s: S)
-    -> (MockTransportCtl<multiplex::Frame<&'static str, u32, io::Error>>, Box<Any>)
+pub fn multiplex_server<S>
+    (s: S)
+     -> (MockTransportCtl<multiplex::Frame<&'static str, u32, io::Error>>, Box<Any>)
     where S: Service<Request = Message<&'static str, Body<u32, io::Error>>,
                      Response = Message<&'static str, MockBodyStream>,
-                     Error = io::Error> + Send + 'static,
+                     Error = io::Error> + Send + 'static
 {
     drop(env_logger::init());
 

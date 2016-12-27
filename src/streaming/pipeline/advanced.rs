@@ -19,7 +19,9 @@ use buffer_one::BufferOne;
 
 /// Provides protocol pipelining functionality in a generic way over clients
 /// and servers. Used internally by `pipeline::Client` and `pipeline::Server`.
-pub struct Pipeline<T> where T: Dispatch {
+pub struct Pipeline<T>
+    where T: Dispatch
+{
     // True as long as the connection has more request frames to read.
     run: bool,
 
@@ -64,16 +66,21 @@ pub trait Dispatch {
 
     /// Transport type
     type Transport: Transport<Item = Frame<Self::Out, Self::BodyOut, Self::Error>,
-                              SinkItem = Frame<Self::In, Self::BodyIn, Self::Error>>;
+              SinkItem = Frame<Self::In, Self::BodyIn, Self::Error>>;
 
     /// Mutable reference to the transport
     fn transport(&mut self) -> &mut Self::Transport;
 
     /// Process an out message
-    fn dispatch(&mut self, message: PipelineMessage<Self::Out, Body<Self::BodyOut, Self::Error>, Self::Error>) -> io::Result<()>;
+    fn dispatch(&mut self,
+                message: PipelineMessage<Self::Out,
+                                         Body<Self::BodyOut, Self::Error>,
+                                         Self::Error>)
+                -> io::Result<()>;
 
     /// Poll the next completed message
-    fn poll(&mut self) -> Poll<Option<PipelineMessage<Self::In, Self::Stream, Self::Error>>, io::Error>;
+    fn poll(&mut self)
+            -> Poll<Option<PipelineMessage<Self::In, Self::Stream, Self::Error>>, io::Error>;
 
     /// RPC currently in flight
     /// TODO: Get rid of
@@ -86,7 +93,9 @@ struct DispatchSink<T> {
 
 type BodySender<B, E> = BufferOne<mpsc::Sender<Result<B, E>>>;
 
-impl<T> Pipeline<T> where T: Dispatch {
+impl<T> Pipeline<T>
+    where T: Dispatch
+{
     /// Create a new pipeline `Pipeline` dispatcher with the given service and
     /// transport
     pub fn new(dispatch: T) -> Pipeline<T> {
@@ -268,12 +277,17 @@ impl<T> Pipeline<T> where T: Dispatch {
         Ok(())
     }
 
-    fn write_in_message(&mut self, message: Result<Message<T::In, T::Stream>, T::Error>) -> io::Result<()> {
+    fn write_in_message(&mut self,
+                        message: Result<Message<T::In, T::Stream>, T::Error>)
+                        -> io::Result<()> {
         trace!("write_in_message");
         match message {
             Ok(Message::WithoutBody(val)) => {
                 trace!("got in_flight value without body");
-                let msg = Frame::Message { message: val, body: false };
+                let msg = Frame::Message {
+                    message: val,
+                    body: false,
+                };
                 try!(assert_send(&mut self.dispatch, msg));
 
                 // TODO: don't panic maybe if this isn't true?
@@ -284,7 +298,10 @@ impl<T> Pipeline<T> where T: Dispatch {
             }
             Ok(Message::WithBody(val, body)) => {
                 trace!("got in_flight value with body");
-                let msg = Frame::Message { message: val, body: true };
+                let msg = Frame::Message {
+                    message: val,
+                    body: true,
+                };
                 try!(assert_send(&mut self.dispatch, msg));
 
                 // TODO: don't panic maybe if this isn't true?
@@ -317,12 +334,10 @@ impl<T> Pipeline<T> where T: Dispatch {
 
                 match self.in_body.as_mut().unwrap().poll() {
                     Ok(Async::Ready(Some(chunk))) => {
-                        try!(assert_send(&mut self.dispatch,
-                                         Frame::Body { chunk: Some(chunk) }));
+                        try!(assert_send(&mut self.dispatch, Frame::Body { chunk: Some(chunk) }));
                     }
                     Ok(Async::Ready(None)) => {
-                        try!(assert_send(&mut self.dispatch,
-                                         Frame::Body { chunk: None }));
+                        try!(assert_send(&mut self.dispatch, Frame::Body { chunk: None }));
                         break;
                     }
                     Err(_) => {
@@ -361,7 +376,9 @@ impl<T> Pipeline<T> where T: Dispatch {
     }
 }
 
-impl<T> Future for Pipeline<T> where T: Dispatch {
+impl<T> Future for Pipeline<T>
+    where T: Dispatch
+{
     type Item = ();
     type Error = io::Error;
 
@@ -395,7 +412,7 @@ impl<T> Future for Pipeline<T> where T: Dispatch {
         // case where the client shuts down half the socket.
         //
         if self.is_done() {
-            return Ok(().into())
+            return Ok(().into());
         }
 
         // Tick again later
@@ -407,9 +424,7 @@ impl<T: Dispatch> Sink for DispatchSink<T> {
     type SinkItem = <T::Transport as Sink>::SinkItem;
     type SinkError = io::Error;
 
-    fn start_send(&mut self, item: Self::SinkItem)
-                  -> StartSend<Self::SinkItem, io::Error>
-    {
+    fn start_send(&mut self, item: Self::SinkItem) -> StartSend<Self::SinkItem, io::Error> {
         self.inner.transport().start_send(item)
     }
 

@@ -268,8 +268,8 @@ pub trait BindClient<Kind, T: 'static>: 'static {
 
     /// The bound service.
     type BindClient: Service<Request = Self::ServiceRequest,
-                             Response = Self::ServiceResponse,
-                             Error = Self::ServiceError>;
+            Response = Self::ServiceResponse,
+            Error = Self::ServiceError>;
 
     /// Bind an I/O object as a service.
     fn bind_client(&self, handle: &Handle, io: T) -> Self::BindClient;

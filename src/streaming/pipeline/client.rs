@@ -34,9 +34,8 @@ pub trait ClientProto<T: 'static>: 'static {
     type Error: From<io::Error> + 'static;
 
     /// The frame transport, which usually take `T` as a parameter.
-    type Transport:
-        Transport<Item = Frame<Self::Response, Self::ResponseBody, Self::Error>,
-                  SinkItem = Frame<Self::Request, Self::RequestBody, Self::Error>>;
+    type Transport: Transport<Item = Frame<Self::Response, Self::ResponseBody, Self::Error>,
+              SinkItem = Frame<Self::Request, Self::RequestBody, Self::Error>>;
 
     /// A future for initializing a transport from an I/O object.
     ///
@@ -48,10 +47,10 @@ pub trait ClientProto<T: 'static>: 'static {
     fn bind_transport(&self, io: T) -> Self::BindTransport;
 }
 
-impl<P, T, B> BindClient<StreamingPipeline<B>, T> for P where
-    P: ClientProto<T>,
-    T: 'static,
-    B: Stream<Item = P::RequestBody, Error = P::Error> + 'static,
+impl<P, T, B> BindClient<StreamingPipeline<B>, T> for P
+    where P: ClientProto<T>,
+          T: 'static,
+          B: Stream<Item = P::RequestBody, Error = P::Error> + 'static
 {
     type ServiceRequest = Message<P::Request, B>;
     type ServiceResponse = Message<P::Response, Body<P::ResponseBody, P::Error>>;
@@ -62,17 +61,20 @@ impl<P, T, B> BindClient<StreamingPipeline<B>, T> for P where
     fn bind_client(&self, handle: &Handle, io: T) -> Self::BindClient {
         let (client, rx) = client_proxy::pair();
 
-        let task = self.bind_transport(io).into_future().and_then(|transport| {
-            let dispatch: Dispatch<P, T, B> = Dispatch {
-                transport: transport,
-                requests: rx,
-                in_flight: VecDeque::with_capacity(32),
-            };
-            Pipeline::new(dispatch)
-        }).map_err(|e| {
-            // TODO: where to punt this error to?
-            error!("pipeline error: {}", e);
-        });
+        let task = self.bind_transport(io)
+            .into_future()
+            .and_then(|transport| {
+                let dispatch: Dispatch<P, T, B> = Dispatch {
+                    transport: transport,
+                    requests: rx,
+                    in_flight: VecDeque::with_capacity(32),
+                };
+                Pipeline::new(dispatch)
+            })
+            .map_err(|e| {
+                // TODO: where to punt this error to?
+                error!("pipeline error: {}", e);
+            });
 
         // Spawn the task
         handle.spawn(task);
@@ -82,19 +84,19 @@ impl<P, T, B> BindClient<StreamingPipeline<B>, T> for P where
     }
 }
 
-struct Dispatch<P, T, B> where
-    P: ClientProto<T> + BindClient<StreamingPipeline<B>, T>,
-    T: 'static,
-    B: Stream<Item = P::RequestBody, Error = P::Error> + 'static,
+struct Dispatch<P, T, B>
+    where P: ClientProto<T> + BindClient<StreamingPipeline<B>, T>,
+          T: 'static,
+          B: Stream<Item = P::RequestBody, Error = P::Error> + 'static
 {
     transport: P::Transport,
     requests: Receiver<P::ServiceRequest, P::ServiceResponse, P::Error>,
     in_flight: VecDeque<Complete<Result<P::ServiceResponse, P::Error>>>,
 }
 
-impl<P, T, B> super::advanced::Dispatch for Dispatch<P, T, B> where
-    P: ClientProto<T>,
-    B: Stream<Item = P::RequestBody, Error = P::Error>,
+impl<P, T, B> super::advanced::Dispatch for Dispatch<P, T, B>
+    where P: ClientProto<T>,
+          B: Stream<Item = P::RequestBody, Error = P::Error>
 {
     type Io = T;
     type In = P::Request;
@@ -110,9 +112,10 @@ impl<P, T, B> super::advanced::Dispatch for Dispatch<P, T, B> where
     }
 
     fn dispatch(&mut self,
-                response: PipelineMessage<Self::Out, Body<Self::BodyOut, Self::Error>, Self::Error>)
-                -> io::Result<()>
-    {
+                response: PipelineMessage<Self::Out,
+                                          Body<Self::BodyOut, Self::Error>,
+                                          Self::Error>)
+                -> io::Result<()> {
         if let Some(complete) = self.in_flight.pop_front() {
             complete.complete(response);
         } else {
@@ -122,9 +125,8 @@ impl<P, T, B> super::advanced::Dispatch for Dispatch<P, T, B> where
         Ok(())
     }
 
-    fn poll(&mut self) -> Poll<Option<PipelineMessage<Self::In, Self::Stream, Self::Error>>,
-                               io::Error>
-    {
+    fn poll(&mut self)
+            -> Poll<Option<PipelineMessage<Self::In, Self::Stream, Self::Error>>, io::Error> {
         trace!("Dispatch::poll");
         // Try to get a new request frame
         match self.requests.poll() {
@@ -161,10 +163,10 @@ impl<P, T, B> super::advanced::Dispatch for Dispatch<P, T, B> where
     }
 }
 
-impl<P, T, B> Drop for Dispatch<P, T, B> where
-    P: ClientProto<T> + BindClient<StreamingPipeline<B>, T>,
-    T: 'static,
-    B: Stream<Item = P::RequestBody, Error = P::Error> + 'static,
+impl<P, T, B> Drop for Dispatch<P, T, B>
+    where P: ClientProto<T> + BindClient<StreamingPipeline<B>, T>,
+          T: 'static,
+          B: Stream<Item = P::RequestBody, Error = P::Error> + 'static
 {
     fn drop(&mut self) {
         // Complete any pending requests with an error
