@@ -50,7 +50,7 @@ A basic Redis client built with Tokio.
 If you're interested in building with Tokio you may want to check out the following articles:
 
 * [Introduction to Futures](http://aturon.github.io/blog/2016/08/11/futures/) which this crate is based on.
-* [Carl's Introduction to Tokio](https://medium.com/@carllerche/announcing-tokio-df6bb4ddb34#.s2jti29o3) to the crate.
+* [Carl's Introduction to Tokio](https://medium.com/@carllerche/announcing-tokio-df6bb4ddb34).
 
 ## License
 
