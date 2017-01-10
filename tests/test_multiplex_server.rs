@@ -257,6 +257,8 @@ fn test_reaching_max_in_flight_requests() {
 
     c.complete(Ok(Message::WithoutBody("zomg")));
 
+    std::thread::sleep(std::time::Duration::from_secs(1));
+
     // Next request not yet processed
     assert_eq!(32, c1.load(Ordering::SeqCst));
 
