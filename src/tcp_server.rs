@@ -85,6 +85,7 @@ impl<Kind, P> TcpServer<Kind, P> where
 
     /// Set the number of threads running simultaneous event loops (Unix only).
     pub fn threads(&mut self, threads: usize) {
+        assert!(threads > 0);
         if cfg!(unix) {
             self.threads = threads;
         }
